@@ -10,5 +10,10 @@ COPY api.py .
 # Expose the port on which the API will run
 EXPOSE 5000
 
+# Add a new user with user id 8877
+RUN useradd -u 8877 noroot
+# Change to non-root privilege
+USER noroot
+
 # Set the command to run the API when the container starts
 CMD ["python", "api.py"]

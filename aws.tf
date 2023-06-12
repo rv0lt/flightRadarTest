@@ -12,8 +12,8 @@ terraform {
   }
 }
 
-resource "aws_iam_role" "api_task_execution_role" {
-  name               = "api-task-execution-role"
+resource "aws_iam_role" "flight_api_task_execution_role" {
+  name               = "flight_api-task-execution-role"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
 }
 
@@ -36,7 +36,7 @@ data "aws_iam_policy" "ecs_task_execution_role" {
 
 # Attach the above policy to the execution role.
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
-  role       = aws_iam_role.api_task_execution_role.name
+  role       = aws_iam_role.flight_api_task_execution_role.name
   policy_arn = data.aws_iam_policy.ecs_task_execution_role.arn
 }
 
@@ -198,13 +198,13 @@ resource "aws_security_group" "ingress_api" {
 }
 
 
-resource "aws_ecs_task_definition" "api" {
-  family = "api"
+resource "aws_ecs_task_definition" "flight-api" {
+  family = "flight-api"
 
   container_definitions = <<EOF
   [
     {
-      "name": "api",
+      "name": "flight-api",
       "image": "rv0lt/flightradartest:v1",
       "portMappings": [
         {
@@ -215,7 +215,7 @@ resource "aws_ecs_task_definition" "api" {
   ]
   EOF
 
-  execution_role_arn = aws_iam_role.api_task_execution_role.arn
+  execution_role_arn = aws_iam_role.flight_api_task_execution_role.arn
   # These are the minimum values for Fargate containers.
   cpu = 256
   memory = 512
@@ -225,8 +225,8 @@ resource "aws_ecs_task_definition" "api" {
   network_mode = "awsvpc"
 }
 
-resource "aws_lb_target_group" "api" {
-  name        = "api"
+resource "aws_lb_target_group" "flight_api" {
+  name        = "flight-api"
   port        = 5000
   protocol    = "HTTP"
   target_type = "ip"
@@ -237,11 +237,11 @@ resource "aws_lb_target_group" "api" {
     path    = "/health"
   }
 
-  depends_on = [aws_alb.api]
+  depends_on = [aws_alb.flight_api]
 }
 
-resource "aws_alb" "api" {
-  name               = "api-lb"
+resource "aws_alb" "flight_api" {
+  name               = "flight-api-lb"
   internal           = false
   load_balancer_type = "application"
 
@@ -259,14 +259,14 @@ resource "aws_alb" "api" {
   depends_on = [aws_internet_gateway.igw]
 }
 
-resource "aws_alb_listener" "api_http" {
+resource "aws_alb_listener" "flight_api_http" {
   load_balancer_arn = aws_alb.api.arn
   port              = "80"
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.api.arn
+    target_group_arn = aws_lb_target_group.flight_api.arn
   }
 }
 
@@ -278,9 +278,9 @@ resource "aws_ecs_cluster" "app" {
    name = "app"
 }
 
-resource "aws_ecs_service" "api" {
-  name            = "api"
-  task_definition = "aws_ecs_task_definition.api.arn"
+resource "aws_ecs_service" "flight_api" {
+  name            = "flight_api"
+  task_definition = "aws_ecs_task_definition.flight_api.arn"
   cluster         = aws_ecs_cluster.app.id
   launch_type     = "FARGATE"
 
@@ -298,8 +298,8 @@ resource "aws_ecs_service" "api" {
    ]
  }
  load_balancer {
-   target_group_arn = aws_lb_target_group.api.arn
-   container_name   = "api"
+   target_group_arn = aws_lb_target_group.flight_api.arn
+   container_name   = "flight_api"
    container_port   = "5000"
  }
 desired_count = 1
